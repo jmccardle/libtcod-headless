@@ -11,12 +11,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     VERIFY_INTERFACE_HEADER_SETS TRUE
 )
 
+# libtcod-headless: defaults configured for SDL-free builds with vendored dependencies
 set(LIBTCOD_THREADS ON CACHE BOOL "If true then older thread functions are enabled by libtcod.")
-set(LIBTCOD_SDL3 "find_package" CACHE STRING "How this library will be linked.")
+set(LIBTCOD_SDL3 "disable" CACHE STRING "How this library will be linked. Default: disable for headless builds.")
 set(LIBTCOD_ZLIB "find_package" CACHE STRING "How this library will be linked.")
-set(LIBTCOD_LODEPNG "find_package" CACHE STRING "How this library will be linked.")
-set(LIBTCOD_UTF8PROC "vcpkg" CACHE STRING "How this library will be linked.")
-set(LIBTCOD_STB "find_package" CACHE STRING "How this library will be linked.")
+set(LIBTCOD_LODEPNG "vendored" CACHE STRING "How this library will be linked. Default: vendored for self-contained builds.")
+set(LIBTCOD_UTF8PROC "vendored" CACHE STRING "How this library will be linked. Default: vendored for self-contained builds.")
+set(LIBTCOD_STB "vendored" CACHE STRING "How this library will be linked. Default: vendored for self-contained builds.")
 
 if(CONAN_FILE)
     message(STATUS "Fetching dependencies from Conan.")
