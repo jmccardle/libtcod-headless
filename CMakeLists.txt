@@ -9,7 +9,7 @@ option(LIBTCOD_CPACK "Enable CPack for libtcod." OFF)
 option(LIBTCOD_DOCS "Build documentation using Doxygen for installation." OFF)
 
 option(LIBTCOD_THREADS "If true then deprecated thread functions are enabled by libtcod." ON)
-option(LIBTCOD_SDL3 "Enable or disable this library dependency." ON)
+option(LIBTCOD_SDL3 "Enable or disable this library dependency." OFF)
 option(LIBTCOD_ZLIB "Enable or disable this library dependency." ON)
 set(LIBTCOD_LODEPNG "ON" CACHE STRING "How this library will be linked.")
 set(LIBTCOD_UTF8PROC "ON" CACHE STRING "How this library will be linked.")
