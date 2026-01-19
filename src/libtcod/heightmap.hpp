@@ -333,6 +333,52 @@ class TCODLIB_API TCODHeightMap {
 	*/
 	void kernelTransform(int kernelSize, const int *dx, const int *dy, const float *weight, float minLevel,float maxLevel);
 
+  // clang-format on
+  /**
+   * @brief Apply a sparse kernel convolution from a source heightmap.
+   *
+   * Unlike kernelTransform which modifies in-place, this reads from a separate
+   * source and writes to this heightmap, producing correct convolution results.
+   *
+   * @param source Source heightmap to read from.
+   * @param kernelSize Number of elements in the kernel arrays.
+   * @param dx Array of x-offsets for kernel positions.
+   * @param dy Array of y-offsets for kernel positions.
+   * @param weight Array of weights for each kernel position.
+   * @param minLevel Minimum value for cells to be transformed.
+   * @param maxLevel Maximum value for cells to be transformed.
+   */
+  void kernelTransform(
+      const TCODHeightMap& source,
+      int kernelSize,
+      const int* dx,
+      const int* dy,
+      const float* weight,
+      float minLevel,
+      float maxLevel);
+
+  /**
+   * @brief Apply a 3x3 convolution kernel from a source heightmap.
+   *
+   * @param source Source heightmap to read from.
+   * @param kernel 9-element array of kernel weights in row-major order.
+   * @param normalize If true, divide by sum of weights.
+   */
+  void convolve3x3(const TCODHeightMap& source, const float kernel[9], bool normalize = true);
+
+  /**
+   * @brief Compute the gradient of a source heightmap.
+   *
+   * Calculates x and y partial derivatives using central differences.
+   * Results are stored in this heightmap as dx. If dy_out is provided,
+   * dy is stored there.
+   *
+   * @param source Source heightmap to compute gradient from.
+   * @param dy_out Optional output for y gradient (may be nullptr).
+   */
+  void gradient(const TCODHeightMap& source, TCODHeightMap* dy_out = nullptr);
+  // clang-format off
+
 	/**
 	@PageName heightmap_modify
 	@FuncTitle Add a Voronoi diagram

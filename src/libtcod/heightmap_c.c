@@ -514,6 +514,31 @@ void TCOD_heightmap_heat_erosion(TCOD_heightmap_t *hm, int nbPass,float minSlope
 }
 #endif
 
+/**
+    @brief Apply a sparse kernel transform to a heightmap in-place.
+
+    @details This function modifies the heightmap in-place during iteration.
+    Because cells are processed in row-major order and results are written
+    immediately, earlier-processed cells affect the computation of later cells.
+    This produces a Gauss-Seidel-like iterative effect rather than a true
+    convolution.
+
+    For mathematically correct convolution with separate input/output buffers,
+    use TCOD_heightmap_kernel_transform_hm instead.
+
+    @param hm Heightmap to transform (modified in-place).
+    @param kernel_size Number of elements in the kernel arrays.
+    @param dx Array of x-offsets for kernel positions.
+    @param dy Array of y-offsets for kernel positions.
+    @param weight Array of weights for each kernel position.
+    @param minLevel Minimum value for cells to be transformed.
+    @param maxLevel Maximum value for cells to be transformed.
+
+    @note Due to in-place modification, results depend on processing order.
+    For true convolution behavior, use TCOD_heightmap_kernel_transform_hm.
+
+    @see TCOD_heightmap_kernel_transform_hm
+ */
 void TCOD_heightmap_kernel_transform(
     TCOD_heightmap_t* hm,
     int kernel_size,
@@ -539,6 +564,194 @@ void TCOD_heightmap_kernel_transform(
           }
         }
         GET_VALUE(hm, x, y) = val / totalWeight;
+      }
+    }
+  }
+}
+
+/**
+    @brief Apply a sparse kernel convolution from source to destination heightmap.
+
+    @details This function performs a proper convolution operation, reading from
+    the source heightmap and writing results to a separate destination heightmap.
+    Unlike TCOD_heightmap_kernel_transform, which modifies values in-place during
+    iteration, this function produces mathematically correct convolution results.
+
+    The kernel is defined by parallel arrays of x-offsets, y-offsets, and weights.
+    For each cell, the weighted sum of neighboring values (as defined by the kernel)
+    is computed and normalized by the total weight of in-bounds neighbors.
+
+    Cells with values outside [minLevel, maxLevel] are copied unchanged.
+
+    @param hm_src Source heightmap (read-only).
+    @param hm_dst Destination heightmap (must be same size as source).
+    @param kernel_size Number of elements in the kernel arrays.
+    @param dx Array of x-offsets for kernel positions.
+    @param dy Array of y-offsets for kernel positions.
+    @param weight Array of weights for each kernel position.
+    @param minLevel Minimum value for cells to be transformed.
+    @param maxLevel Maximum value for cells to be transformed.
+
+    @code{.c}
+      // Example: 3x3 blur kernel
+      const int dx[] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
+      const int dy[] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
+      const float weight[] = {1, 2, 1, 2, 4, 2, 1, 2, 1};
+      TCOD_heightmap_kernel_transform_hm(src, dst, 9, dx, dy, weight, -FLT_MAX, FLT_MAX);
+    @endcode
+
+    @versionadded{Unreleased}
+ */
+void TCOD_heightmap_kernel_transform_hm(
+    const TCOD_heightmap_t* hm_src,
+    TCOD_heightmap_t* hm_dst,
+    int kernel_size,
+    const int* dx,
+    const int* dy,
+    const float* weight,
+    float minLevel,
+    float maxLevel) {
+  if (!is_same_size(hm_src, hm_dst)) {
+    return;
+  }
+  for (int y = 0; y < hm_src->h; y++) {
+    for (int x = 0; x < hm_src->w; x++) {
+      const float src_val = GET_VALUE(hm_src, x, y);
+      if (src_val >= minLevel && src_val <= maxLevel) {
+        float val = 0.0f;
+        float totalWeight = 0.0f;
+        for (int i = 0; i < kernel_size; i++) {
+          const int nx = x + dx[i];
+          const int ny = y + dy[i];
+          if (in_bounds(hm_src, nx, ny)) {
+            val += weight[i] * GET_VALUE(hm_src, nx, ny);
+            totalWeight += weight[i];
+          }
+        }
+        GET_VALUE(hm_dst, x, y) = val / totalWeight;
+      } else {
+        GET_VALUE(hm_dst, x, y) = src_val;
+      }
+    }
+  }
+}
+
+/**
+    @brief Apply a dense 3x3 convolution kernel from source to destination.
+
+    @details Optimized convolution for 3x3 kernels. The kernel is provided as
+    a 9-element array in row-major order:
+
+        kernel[0] kernel[1] kernel[2]
+        kernel[3] kernel[4] kernel[5]
+        kernel[6] kernel[7] kernel[8]
+
+    At boundaries, out-of-bounds neighbors are excluded and weights renormalized.
+
+    @param hm_src Source heightmap.
+    @param hm_dst Destination heightmap (must be same size as source).
+    @param kernel 9-element array of kernel weights in row-major order.
+    @param normalize If true, divide by sum of weights; if false, apply raw sum.
+
+    @code{.c}
+      // Gaussian blur
+      const float blur[9] = {1, 2, 1, 2, 4, 2, 1, 2, 1};
+      TCOD_heightmap_convolve3x3(src, dst, blur, true);
+
+      // Sobel edge detection (X direction) - don't normalize
+      const float sobel_x[9] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
+      TCOD_heightmap_convolve3x3(src, dst, sobel_x, false);
+    @endcode
+
+    @versionadded{Unreleased}
+ */
+void TCOD_heightmap_convolve3x3(
+    const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dst, const float kernel[9], bool normalize) {
+  if (!is_same_size(hm_src, hm_dst)) {
+    return;
+  }
+  static const int offsets_x[9] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
+  static const int offsets_y[9] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
+
+  for (int y = 0; y < hm_src->h; y++) {
+    for (int x = 0; x < hm_src->w; x++) {
+      float val = 0.0f;
+      float totalWeight = 0.0f;
+      for (int i = 0; i < 9; i++) {
+        const int nx = x + offsets_x[i];
+        const int ny = y + offsets_y[i];
+        if (in_bounds(hm_src, nx, ny)) {
+          val += kernel[i] * GET_VALUE(hm_src, nx, ny);
+          totalWeight += kernel[i];
+        }
+      }
+      if (normalize && totalWeight != 0.0f) {
+        GET_VALUE(hm_dst, x, y) = val / totalWeight;
+      } else {
+        GET_VALUE(hm_dst, x, y) = val;
+      }
+    }
+  }
+}
+
+/**
+    @brief Compute the gradient (partial derivatives) of a heightmap.
+
+    @details Calculates the x and y partial derivatives using central differences.
+    At boundaries, one-sided differences are used.
+
+    The gradient vector at each point indicates the direction of steepest ascent.
+    The magnitude sqrt(dx*dx + dy*dy) indicates the slope steepness.
+
+    @param hm_src Source heightmap.
+    @param hm_dx Output heightmap for x partial derivative (dh/dx). May be NULL.
+    @param hm_dy Output heightmap for y partial derivative (dh/dy). May be NULL.
+
+    @code{.c}
+      TCOD_heightmap_t* src = TCOD_heightmap_new(100, 100);
+      TCOD_heightmap_t* dx = TCOD_heightmap_new(100, 100);
+      TCOD_heightmap_t* dy = TCOD_heightmap_new(100, 100);
+      // ... populate src ...
+      TCOD_heightmap_gradient(src, dx, dy);
+      // Now dx and dy contain the gradient components
+    @endcode
+
+    @versionadded{Unreleased}
+ */
+void TCOD_heightmap_gradient(const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dx, TCOD_heightmap_t* hm_dy) {
+  if (!hm_src) {
+    return;
+  }
+  if (hm_dx && !is_same_size(hm_src, hm_dx)) {
+    return;
+  }
+  if (hm_dy && !is_same_size(hm_src, hm_dy)) {
+    return;
+  }
+
+  for (int y = 0; y < hm_src->h; y++) {
+    for (int x = 0; x < hm_src->w; x++) {
+      if (hm_dx) {
+        float grad_x;
+        if (x == 0) {
+          grad_x = GET_VALUE(hm_src, x + 1, y) - GET_VALUE(hm_src, x, y);
+        } else if (x == hm_src->w - 1) {
+          grad_x = GET_VALUE(hm_src, x, y) - GET_VALUE(hm_src, x - 1, y);
+        } else {
+          grad_x = (GET_VALUE(hm_src, x + 1, y) - GET_VALUE(hm_src, x - 1, y)) * 0.5f;
+        }
+        GET_VALUE(hm_dx, x, y) = grad_x;
+      }
+      if (hm_dy) {
+        float grad_y;
+        if (y == 0) {
+          grad_y = GET_VALUE(hm_src, x, y + 1) - GET_VALUE(hm_src, x, y);
+        } else if (y == hm_src->h - 1) {
+          grad_y = GET_VALUE(hm_src, x, y) - GET_VALUE(hm_src, x, y - 1);
+        } else {
+          grad_y = (GET_VALUE(hm_src, x, y + 1) - GET_VALUE(hm_src, x, y - 1)) * 0.5f;
+        }
+        GET_VALUE(hm_dy, x, y) = grad_y;
       }
     }
   }

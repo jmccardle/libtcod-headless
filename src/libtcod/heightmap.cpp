@@ -162,6 +162,36 @@ void TCODHeightMap::kernelTransform(
   TCOD_heightmap_kernel_transform(&hm, kernelSize, dx, dy, weight, minLevel, maxLevel);
 }
 
+void TCODHeightMap::kernelTransform(
+    const TCODHeightMap& source,
+    int kernelSize,
+    const int* dx,
+    const int* dy,
+    const float* weight,
+    float minLevel,
+    float maxLevel) {
+  const TCOD_heightmap_t hm_src = to_struct(source);
+  TCOD_heightmap_t hm_dst = to_struct(*this);
+  TCOD_heightmap_kernel_transform_hm(&hm_src, &hm_dst, kernelSize, dx, dy, weight, minLevel, maxLevel);
+}
+
+void TCODHeightMap::convolve3x3(const TCODHeightMap& source, const float kernel[9], bool normalize) {
+  const TCOD_heightmap_t hm_src = to_struct(source);
+  TCOD_heightmap_t hm_dst = to_struct(*this);
+  TCOD_heightmap_convolve3x3(&hm_src, &hm_dst, kernel, normalize);
+}
+
+void TCODHeightMap::gradient(const TCODHeightMap& source, TCODHeightMap* dy_out) {
+  const TCOD_heightmap_t hm_src = to_struct(source);
+  TCOD_heightmap_t hm_dx = to_struct(*this);
+  if (dy_out) {
+    TCOD_heightmap_t hm_dy = to_struct(*dy_out);
+    TCOD_heightmap_gradient(&hm_src, &hm_dx, &hm_dy);
+  } else {
+    TCOD_heightmap_gradient(&hm_src, &hm_dx, nullptr);
+  }
+}
+
 void TCODHeightMap::addVoronoi(int nbPoints, int nbCoef, const float* coef, TCODRandom* rnd) {
   TCOD_heightmap_t hm = to_struct(*this);
   TCOD_heightmap_add_voronoi(&hm, nbPoints, nbCoef, coef, rnd->data);

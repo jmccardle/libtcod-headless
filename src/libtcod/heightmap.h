@@ -87,6 +87,19 @@ TCODLIB_API void TCOD_heightmap_kernel_transform(
     const float* weight,
     float minLevel,
     float maxLevel);
+TCODLIB_API void TCOD_heightmap_kernel_transform_hm(
+    const TCOD_heightmap_t* hm_src,
+    TCOD_heightmap_t* hm_dst,
+    int kernel_size,
+    const int* dx,
+    const int* dy,
+    const float* weight,
+    float minLevel,
+    float maxLevel);
+TCODLIB_API void TCOD_heightmap_convolve3x3(
+    const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dst, const float kernel[9], bool normalize);
+TCODLIB_API void TCOD_heightmap_gradient(
+    const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dx, TCOD_heightmap_t* hm_dy);
 TCODLIB_API void TCOD_heightmap_add_voronoi(
     TCOD_heightmap_t* hm, int nbPoints, int nbCoef, const float* coef, TCOD_Random* rnd);
 TCODLIB_API void TCOD_heightmap_mid_point_displacement(TCOD_heightmap_t* hm, TCOD_Random* rnd, float roughness);
