@@ -198,6 +198,26 @@ TCODLIB_API void TCOD_heightmap_kernel_transform_out(
     const int* __restrict dy,
     const float* __restrict weight,
     const uint8_t* __restrict mask);
+/**
+    @brief Compute the gradient (partial derivatives) of a heightmap.
+
+    Calculates the x and y partial derivatives using central differences.
+    At boundaries, one-sided differences are used.
+
+    The gradient vector at each point indicates the direction of steepest ascent.
+    The magnitude sqrt(dx*dx + dy*dy) gives the slope steepness.
+
+    Unlike TCOD_heightmap_get_slope which returns only magnitude, this function
+    provides directional information needed for applications like fluid simulation.
+
+    @param hm_src Source heightmap.
+    @param hm_dx Output heightmap for x partial derivative (dh/dx). May be NULL.
+    @param hm_dy Output heightmap for y partial derivative (dh/dy). May be NULL.
+
+    @versionadded{Unreleased}
+ */
+TCODLIB_API void TCOD_heightmap_gradient(
+    const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dx, TCOD_heightmap_t* hm_dy);
 TCODLIB_API void TCOD_heightmap_add_voronoi(
     TCOD_heightmap_t* __restrict hm,
     int nbPoints,

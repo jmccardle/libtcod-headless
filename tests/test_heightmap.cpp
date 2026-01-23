@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <cfloat>
+#include <cmath>
 #include <cstdlib>
 
 #include "libtcod/heightmap.h"
@@ -305,4 +306,77 @@ TEST_CASE("TCOD_heightmap_kernel_transform edge handling", "[heightmap][kernel]"
 
     TCOD_heightmap_delete(hm);
   }
+}
+
+TEST_CASE("TCOD_heightmap_gradient") {
+  // Test gradient computation on a simple slope
+  auto* src = TCOD_heightmap_new(5, 5);
+  auto* dx = TCOD_heightmap_new(5, 5);
+  auto* dy = TCOD_heightmap_new(5, 5);
+
+  // Create a plane tilted in x direction: z = x
+  for (int y = 0; y < 5; y++) {
+    for (int x = 0; x < 5; x++) {
+      TCOD_heightmap_set_value(src, x, y, static_cast<float>(x));
+    }
+  }
+
+  TCOD_heightmap_gradient(src, dx, dy);
+
+  // dx should be 1.0 in the interior (central difference)
+  REQUIRE(std::abs(TCOD_heightmap_get_value(dx, 2, 2) - 1.0f) < 0.001f);
+  // dy should be 0.0 (no change in y direction)
+  REQUIRE(std::abs(TCOD_heightmap_get_value(dy, 2, 2) - 0.0f) < 0.001f);
+
+  // Create a plane tilted in y direction: z = y
+  for (int y = 0; y < 5; y++) {
+    for (int x = 0; x < 5; x++) {
+      TCOD_heightmap_set_value(src, x, y, static_cast<float>(y));
+    }
+  }
+
+  TCOD_heightmap_gradient(src, dx, dy);
+
+  // dx should be 0.0 (no change in x direction)
+  REQUIRE(std::abs(TCOD_heightmap_get_value(dx, 2, 2) - 0.0f) < 0.001f);
+  // dy should be 1.0 in the interior
+  REQUIRE(std::abs(TCOD_heightmap_get_value(dy, 2, 2) - 1.0f) < 0.001f);
+
+  // Test NULL dx/dy arguments (should not crash)
+  TCOD_heightmap_gradient(src, NULL, dy);
+  TCOD_heightmap_gradient(src, dx, NULL);
+  TCOD_heightmap_gradient(src, NULL, NULL);
+
+  TCOD_heightmap_delete(dy);
+  TCOD_heightmap_delete(dx);
+  TCOD_heightmap_delete(src);
+}
+
+TEST_CASE("TCOD_heightmap_gradient boundary handling") {
+  // Test gradient at boundaries uses one-sided differences
+  auto* src = TCOD_heightmap_new(3, 3);
+  auto* dx = TCOD_heightmap_new(3, 3);
+  auto* dy = TCOD_heightmap_new(3, 3);
+
+  // Create z = x + y
+  for (int y = 0; y < 3; y++) {
+    for (int x = 0; x < 3; x++) {
+      TCOD_heightmap_set_value(src, x, y, static_cast<float>(x + y));
+    }
+  }
+
+  TCOD_heightmap_gradient(src, dx, dy);
+
+  // At corners and edges, should still compute sensible gradients
+  // All dx values should be 1.0 (slope of 1 in x)
+  for (int y = 0; y < 3; y++) {
+    for (int x = 0; x < 3; x++) {
+      REQUIRE(std::abs(TCOD_heightmap_get_value(dx, x, y) - 1.0f) < 0.001f);
+      REQUIRE(std::abs(TCOD_heightmap_get_value(dy, x, y) - 1.0f) < 0.001f);
+    }
+  }
+
+  TCOD_heightmap_delete(dy);
+  TCOD_heightmap_delete(dx);
+  TCOD_heightmap_delete(src);
 }

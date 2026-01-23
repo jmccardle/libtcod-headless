@@ -498,6 +498,39 @@ void TCOD_heightmap_kernel_transform(
   TCOD_heightmap_delete(hm_copy);
 }
 
+void TCOD_heightmap_gradient(const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dx, TCOD_heightmap_t* hm_dy) {
+  if (!TCOD_heightmap_is_valid(hm_src)) return;
+  if (hm_dx && !TCOD_heightmap_is_same_size(hm_src, hm_dx)) return;
+  if (hm_dy && !TCOD_heightmap_is_same_size(hm_src, hm_dy)) return;
+
+  for (int y = 0; y < hm_src->h; y++) {
+    for (int x = 0; x < hm_src->w; x++) {
+      if (hm_dx) {
+        float grad_x;
+        if (x == 0) {
+          grad_x = GET_VALUE(hm_src, x + 1, y) - GET_VALUE(hm_src, x, y);
+        } else if (x == hm_src->w - 1) {
+          grad_x = GET_VALUE(hm_src, x, y) - GET_VALUE(hm_src, x - 1, y);
+        } else {
+          grad_x = (GET_VALUE(hm_src, x + 1, y) - GET_VALUE(hm_src, x - 1, y)) * 0.5f;
+        }
+        GET_VALUE(hm_dx, x, y) = grad_x;
+      }
+      if (hm_dy) {
+        float grad_y;
+        if (y == 0) {
+          grad_y = GET_VALUE(hm_src, x, y + 1) - GET_VALUE(hm_src, x, y);
+        } else if (y == hm_src->h - 1) {
+          grad_y = GET_VALUE(hm_src, x, y) - GET_VALUE(hm_src, x, y - 1);
+        } else {
+          grad_y = (GET_VALUE(hm_src, x, y + 1) - GET_VALUE(hm_src, x, y - 1)) * 0.5f;
+        }
+        GET_VALUE(hm_dy, x, y) = grad_y;
+      }
+    }
+  }
+}
+
 void TCOD_heightmap_add_voronoi(
     TCOD_heightmap_t* __restrict hm,
     int nbPoints,

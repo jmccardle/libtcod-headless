@@ -11,6 +11,7 @@ Versions since `2.0.0` only track API breaks and no longer guarantee ABI compati
 ### Added
 - Added `TCOD_heightmap_kernel_transform_out` for convolution with separate source and destination heightmaps.
 - Added `TCOD_heightmap_is_valid` and `TCOD_heightmap_in_bounds`.
+- Added `TCOD_heightmap_gradient` for computing partial derivatives (gradient vector) of heightmaps.
 
 ### Changed
 - `TCOD_heightmap_get_minmax` now outputs `FLT_MAX` and `-FLT_MAX` in exceptional cases instead of zero.
