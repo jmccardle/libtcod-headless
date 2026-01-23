@@ -110,6 +110,26 @@ TCODLIB_API void TCOD_heightmap_kernel_transform_out(
     const int* dx,
     const int* dy,
     const float* weight);
+/**
+    @brief Apply a dense 3x3 convolution kernel from source to destination.
+
+    Optimized convolution for 3x3 kernels. The kernel is provided as
+    a 9-element array in row-major order:
+
+        kernel[0] kernel[1] kernel[2]
+        kernel[3] kernel[4] kernel[5]
+        kernel[6] kernel[7] kernel[8]
+
+    At boundaries, out-of-bounds neighbors are excluded and weights renormalized.
+
+    @param hm_src Source heightmap.
+    @param hm_dst Destination heightmap (must be same size as source).
+    @param kernel 9-element array of kernel weights in row-major order.
+
+    @versionadded{Unreleased}
+ */
+TCODLIB_API void TCOD_heightmap_convolve3x3(
+    const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dst, const float kernel[9]);
 TCODLIB_API void TCOD_heightmap_add_voronoi(
     TCOD_heightmap_t* hm, int nbPoints, int nbCoef, const float* coef, TCOD_Random* rnd);
 TCODLIB_API void TCOD_heightmap_mid_point_displacement(TCOD_heightmap_t* hm, TCOD_Random* rnd, float roughness);

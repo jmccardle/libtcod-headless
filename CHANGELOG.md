@@ -10,6 +10,7 @@ Versions since `2.0.0` only track API breaks and no longer guarantee ABI compati
 ## [Unreleased]
 ### Added
 - Added `TCOD_heightmap_kernel_transform_out` for convolution with separate source and destination heightmaps.
+- Added `TCOD_heightmap_convolve3x3` for optimized dense 3x3 kernel convolution.
 
 ### Fixed
 - Fixed `TCOD_heightmap_kernel_transform` reading modified values during in-place convolution.

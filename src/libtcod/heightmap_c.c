@@ -633,6 +633,55 @@ void TCOD_heightmap_kernel_transform_out(
   }
 }
 
+/**
+    @brief Apply a dense 3x3 convolution kernel from source to destination.
+
+    Optimized convolution for 3x3 kernels. The kernel is provided as
+    a 9-element array in row-major order:
+
+        kernel[0] kernel[1] kernel[2]
+        kernel[3] kernel[4] kernel[5]
+        kernel[6] kernel[7] kernel[8]
+
+    At boundaries, out-of-bounds neighbors are excluded and weights renormalized.
+
+    @param hm_src Source heightmap.
+    @param hm_dst Destination heightmap (must be same size as source).
+    @param kernel 9-element array of kernel weights in row-major order.
+
+    @code{.c}
+      // Gaussian blur
+      const float blur[9] = {1, 2, 1, 2, 4, 2, 1, 2, 1};
+      TCOD_heightmap_convolve3x3(src, dst, blur);
+    @endcode
+
+    @versionadded{Unreleased}
+ */
+void TCOD_heightmap_convolve3x3(const TCOD_heightmap_t* hm_src, TCOD_heightmap_t* hm_dst, const float kernel[9]) {
+  if (!is_same_size(hm_src, hm_dst)) {
+    return;
+  }
+  // Fixed offsets for 3x3 kernel in row-major order
+  static const int offsets_x[9] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
+  static const int offsets_y[9] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
+
+  for (int y = 0; y < hm_src->h; y++) {
+    for (int x = 0; x < hm_src->w; x++) {
+      float val = 0.0f;
+      float totalWeight = 0.0f;
+      for (int i = 0; i < 9; i++) {
+        const int nx = x + offsets_x[i];
+        const int ny = y + offsets_y[i];
+        if (in_bounds(hm_src, nx, ny)) {
+          val += kernel[i] * GET_VALUE(hm_src, nx, ny);
+          totalWeight += kernel[i];
+        }
+      }
+      GET_VALUE(hm_dst, x, y) = val / totalWeight;
+    }
+  }
+}
+
 void TCOD_heightmap_add_voronoi(TCOD_heightmap_t* hm, int nbPoints, int nbCoef, const float* coef, TCOD_Random* rnd) {
   if (!hm) {
     return;
