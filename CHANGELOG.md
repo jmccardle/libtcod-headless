@@ -8,6 +8,11 @@ Versions since `1.7.0` only track ABI breaks and not API breaks.
 Versions since `2.0.0` only track API breaks and no longer guarantee ABI compatibility.
 
 ## [Unreleased]
+### Added
+- Added `tcod::heightmap_lerp`, `tcod::heightmap_add`, `tcod::heightmap_multiply` namespace functions that return new heightmaps.
+
+### Deprecated
+- Deprecated `TCODHeightMap::lerp`, `TCODHeightMap::add(a, b)`, `TCODHeightMap::multiply` in favor of `tcod::` namespace functions.
 
 ## [2.2.2] - 2026-01-06
 ### CMake

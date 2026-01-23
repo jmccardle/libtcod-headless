@@ -220,6 +220,7 @@ class TCODLIB_API TCODHeightMap {
 		For each cell in the destination map (this for C++), value = a.value + (b.value - a.value) * coef
 	@Param res	In the C and Python versions, the address of the destination heightmap.
 	*/
+	[[deprecated("Use tcod::heightmap_lerp(a, b, coef) instead.")]]
 	void lerp(const TCODHeightMap *a, const TCODHeightMap *b,float coef);
 
 	/**
@@ -233,6 +234,7 @@ class TCODLIB_API TCODHeightMap {
 	@Param b	Second heightmap. For each cell in the destination map (this for C++), value = a.value + b.value
 	@Param res	In the C and Python versions, the address of the destination heightmap.
 	*/
+	[[deprecated("Use tcod::heightmap_add(a, b) instead.")]]
 	void add(const TCODHeightMap *a, const TCODHeightMap *b);
 
 	/**
@@ -246,6 +248,7 @@ class TCODLIB_API TCODHeightMap {
 	@Param b	Second heightmap. For each cell in the destination map (this for C++), value = a.value * b.value
 	@Param res	In the C and Python versions, the address of the destination heightmap.
 	*/
+	[[deprecated("Use tcod::heightmap_multiply(a, b) instead.")]]
 	void multiply(const TCODHeightMap *a, const TCODHeightMap *b);
 
 	/**
@@ -532,5 +535,106 @@ class TCODLIB_API TCODHeightMap {
 
  private:
 };
+
+namespace tcod {
+/// @addtogroup Heightmap
+/// @{
+
+/**
+    Linear interpolation between two heightmaps.
+
+    Returns a new heightmap where each cell value is `a + (b - a) * coef`.
+
+    @param a First heightmap.
+    @param b Second heightmap (must be same size as a).
+    @param coef Interpolation coefficient (0.0 = a, 1.0 = b).
+    @return New heightmap with interpolated values.
+
+    @code{.cpp}
+      TCODHeightMap hm1(64, 64), hm2(64, 64);
+      // ... populate hm1 and hm2 ...
+      auto blended = tcod::heightmap_lerp(hm1, hm2, 0.5f);
+    @endcode
+
+    \rst
+    .. versionadded:: Unreleased
+    \endrst
+ */
+[[nodiscard]] inline TCODHeightMap heightmap_lerp(const TCODHeightMap& a, const TCODHeightMap& b, float coef) {
+  if (a.w != b.w || a.h != b.h) {
+    return TCODHeightMap{};
+  }
+  TCODHeightMap result(a.w, a.h);
+  const TCOD_heightmap_t hm_a{a.w, a.h, const_cast<float*>(a.values)};
+  const TCOD_heightmap_t hm_b{b.w, b.h, const_cast<float*>(b.values)};
+  TCOD_heightmap_t hm_result{result.w, result.h, result.values};
+  TCOD_heightmap_lerp_hm(&hm_a, &hm_b, &hm_result, coef);
+  return result;
+}
+
+/**
+    Add two heightmaps element-wise.
+
+    Returns a new heightmap where each cell value is `a + b`.
+
+    @param a First heightmap.
+    @param b Second heightmap (must be same size as a).
+    @return New heightmap with summed values.
+
+    @code{.cpp}
+      TCODHeightMap hm1(64, 64), hm2(64, 64);
+      // ... populate hm1 and hm2 ...
+      auto combined = tcod::heightmap_add(hm1, hm2);
+    @endcode
+
+    \rst
+    .. versionadded:: Unreleased
+    \endrst
+ */
+[[nodiscard]] inline TCODHeightMap heightmap_add(const TCODHeightMap& a, const TCODHeightMap& b) {
+  if (a.w != b.w || a.h != b.h) {
+    return TCODHeightMap{};
+  }
+  TCODHeightMap result(a.w, a.h);
+  const TCOD_heightmap_t hm_a{a.w, a.h, const_cast<float*>(a.values)};
+  const TCOD_heightmap_t hm_b{b.w, b.h, const_cast<float*>(b.values)};
+  TCOD_heightmap_t hm_result{result.w, result.h, result.values};
+  TCOD_heightmap_add_hm(&hm_a, &hm_b, &hm_result);
+  return result;
+}
+
+/**
+    Multiply two heightmaps element-wise.
+
+    Returns a new heightmap where each cell value is `a * b`.
+
+    @param a First heightmap.
+    @param b Second heightmap (must be same size as a).
+    @return New heightmap with multiplied values.
+
+    @code{.cpp}
+      TCODHeightMap hm1(64, 64), hm2(64, 64);
+      // ... populate hm1 and hm2 ...
+      auto product = tcod::heightmap_multiply(hm1, hm2);
+    @endcode
+
+    \rst
+    .. versionadded:: Unreleased
+    \endrst
+ */
+[[nodiscard]] inline TCODHeightMap heightmap_multiply(const TCODHeightMap& a, const TCODHeightMap& b) {
+  if (a.w != b.w || a.h != b.h) {
+    return TCODHeightMap{};
+  }
+  TCODHeightMap result(a.w, a.h);
+  const TCOD_heightmap_t hm_a{a.w, a.h, const_cast<float*>(a.values)};
+  const TCOD_heightmap_t hm_b{b.w, b.h, const_cast<float*>(b.values)};
+  TCOD_heightmap_t hm_result{result.w, result.h, result.values};
+  TCOD_heightmap_multiply_hm(&hm_a, &hm_b, &hm_result);
+  return result;
+}
+
+/// @}
+}  // namespace tcod
 
 #endif  // TCOD_HEIGHTMAP_HPP_
