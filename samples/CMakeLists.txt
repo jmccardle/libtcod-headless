@@ -123,6 +123,21 @@ if(CONAN_FILE)
     add_dependencies(worldgen copy_font)
 endif()
 
+add_executable(pathfinding
+    pathfinding/main.cpp
+    pathfinding/waypoint_graph.cpp
+    pathfinding/waypoint_graph.hpp
+    pathfinding/hierarchical.cpp
+    pathfinding/hierarchical.hpp
+    pathfinding/visualization.cpp
+    pathfinding/visualization.hpp
+    pathfinding/monastery_map.h
+)
+target_link_libraries(pathfinding ${LINK_TCOD})
+if(CONAN_FILE)
+    add_dependencies(pathfinding copy_font)
+endif()
+
 if(EMSCRIPTEN)
     # Attach data to Emscripten builds.
     foreach(project_it samples_c samples_cpp)
@@ -137,7 +152,7 @@ if(EMSCRIPTEN)
         frost PRIVATE
         "SHELL:--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/../data/fonts/terminal8x8_gs_tc.png@/data/fonts/"
     )
-    foreach(project_it hmtool navier rad weather worldgen)
+    foreach(project_it hmtool navier rad weather worldgen pathfinding)
         target_link_options(
             ${project_it} PRIVATE
             "SHELL:--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/../data@/data/"
@@ -146,7 +161,7 @@ if(EMSCRIPTEN)
 
     # Set output to html to generate preview pages, otherwise you'll have to make your own html.
     set_target_properties(
-        samples_c samples_cpp frost hmtool navier rad ripples weather worldgen
+        samples_c samples_cpp frost hmtool navier rad ripples weather worldgen pathfinding
         PROPERTIES
             SUFFIX ".html"
     )
@@ -155,7 +170,7 @@ endif()
 if(LIBTCOD_INSTALL AND NOT EMSCRIPTEN)
     include(GNUInstallDirs)
     install(
-        TARGETS samples_c samples_cpp frost hmtool navier rad ripples weather worldgen libtcod
+        TARGETS samples_c samples_cpp frost hmtool navier rad ripples weather worldgen pathfinding libtcod
         RUNTIME_DEPENDENCIES
             PRE_EXCLUDE_REGEXES "api-ms-win-crt-"
             POST_EXCLUDE_REGEXES
