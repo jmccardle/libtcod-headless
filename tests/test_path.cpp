@@ -153,3 +153,50 @@ TEST_CASE("A* with map-based pathfinder", "[path]") {
   TCOD_path_delete(path);
   TCOD_map_delete(map);
 }
+
+TEST_CASE("Built-in heuristics", "[path]") {
+  SECTION("Euclidean heuristic") {
+    float h = TCOD_heuristic_euclidean(0, 0, 3, 4, nullptr);
+    REQUIRE(h == Catch::Approx(5.0f));  // 3-4-5 triangle
+  }
+
+  SECTION("Manhattan heuristic") {
+    float h = TCOD_heuristic_manhattan(0, 0, 3, 4, nullptr);
+    REQUIRE(h == 7.0f);  // 3 + 4
+  }
+
+  SECTION("Chebyshev heuristic") {
+    float h = TCOD_heuristic_chebyshev(0, 0, 3, 4, nullptr);
+    REQUIRE(h == 4.0f);  // max(3, 4)
+  }
+
+  SECTION("Diagonal heuristic") {
+    float h = TCOD_heuristic_diagonal(0, 0, 3, 4, nullptr);
+    // min=3, max=4, so: 4 + (sqrt(2)-1)*3 = 4 + 0.414*3 = 5.24
+    REQUIRE(h == Catch::Approx(5.2426f).epsilon(0.01));
+  }
+
+  SECTION("Zero heuristic") {
+    float h = TCOD_heuristic_zero(0, 0, 100, 100, nullptr);
+    REQUIRE(h == 0.0f);
+  }
+}
+
+TEST_CASE("Zero heuristic produces Dijkstra-like behavior", "[path]") {
+  // With zero heuristic, A* becomes Dijkstra (explores more nodes)
+  // A* with Euclidean heuristic
+  auto path_euclidean =
+      TCOD_path_new_using_function_ex(20, 20, simple_cost, TCOD_heuristic_euclidean, nullptr, 1.41f, 1.0f);
+  TCOD_path_compute(path_euclidean, 0, 0, 19, 19);
+
+  // A* with zero heuristic (Dijkstra)
+  auto path_zero = TCOD_path_new_using_function_ex(20, 20, simple_cost, TCOD_heuristic_zero, nullptr, 1.41f, 1.0f);
+  TCOD_path_compute(path_zero, 0, 0, 19, 19);
+
+  // Both should find a path
+  REQUIRE(!TCOD_path_is_empty(path_euclidean));
+  REQUIRE(!TCOD_path_is_empty(path_zero));
+
+  TCOD_path_delete(path_euclidean);
+  TCOD_path_delete(path_zero);
+}
