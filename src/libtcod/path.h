@@ -35,6 +35,8 @@
 #ifndef TCOD_PATH_H_
 #define TCOD_PATH_H_
 
+#include <stdint.h>
+
 #include "fov_types.h"
 #include "list.h"
 #include "portability.h"
@@ -142,6 +144,27 @@ TCODLIB_API TCOD_Dijkstra* TCOD_dijkstra_new(TCOD_Map* map, float diagonalCost);
 TCODLIB_API TCOD_Dijkstra* TCOD_dijkstra_new_using_function(
     int map_width, int map_height, TCOD_path_func_t func, void* user_data, float diagonalCost);
 TCODLIB_API void TCOD_dijkstra_compute(TCOD_Dijkstra* dijkstra, int root_x, int root_y);
+
+/**
+ *  Compute Dijkstra distances from multiple root/goal positions.
+ *
+ *  @param dijkstra The Dijkstra pathfinder.
+ *  @param n_roots Number of root positions.
+ *  @param roots_x Array of x coordinates for root positions.
+ *  @param roots_y Array of y coordinates for root positions.
+ *  @versionadded{Unreleased}
+ */
+TCODLIB_API void TCOD_dijkstra_compute_multi(
+    TCOD_Dijkstra* dijkstra, int n_roots, const int* roots_x, const int* roots_y);
+
+/**
+ *  Compute Dijkstra distances using a mask of goal positions.
+ *
+ *  @param dijkstra The Dijkstra pathfinder.
+ *  @param mask Array of width*height uint8_t values (non-zero = goal).
+ *  @versionadded{Unreleased}
+ */
+TCODLIB_API void TCOD_dijkstra_compute_masked(TCOD_Dijkstra* dijkstra, const uint8_t* mask);
 TCODLIB_API float TCOD_dijkstra_get_distance(TCOD_Dijkstra* dijkstra, int x, int y);
 TCODLIB_API bool TCOD_dijkstra_path_set(TCOD_Dijkstra* dijkstra, int x, int y);
 TCODLIB_API bool TCOD_dijkstra_is_empty(TCOD_Dijkstra* path);
