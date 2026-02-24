@@ -720,6 +720,78 @@ void TCOD_dijkstra_compute_masked(TCOD_Dijkstra* data, const uint8_t* mask) {
   free(roots_y);
 }
 
+/* invert the distance map for flee/safety calculations */
+void TCOD_dijkstra_invert(TCOD_Dijkstra* data) {
+  unsigned int max_dist = 0;
+  unsigned int i;
+  unsigned int m_max;
+
+  TCOD_IFNOT(data != NULL) return;
+
+  m_max = data->nodes_max;
+
+  /* Find maximum non-infinity distance */
+  for (i = 0; i < m_max; i++) {
+    if (data->distances[i] != 0xFFFFFFFF && data->distances[i] > max_dist) {
+      max_dist = data->distances[i];
+    }
+  }
+
+  /* Invert: new_dist = max_dist - old_dist */
+  /* Unreachable cells stay at infinity */
+  for (i = 0; i < m_max; i++) {
+    if (data->distances[i] != 0xFFFFFFFF) {
+      data->distances[i] = max_dist - data->distances[i];
+    }
+  }
+}
+
+/* get the adjacent cell with the lowest distance (gradient descent) */
+bool TCOD_dijkstra_get_descent(TCOD_Dijkstra* data, int x, int y, int* out_x, int* out_y) {
+  static int dx[8] = {-1, 0, 1, 0, -1, 1, 1, -1};
+  static int dy[8] = {0, -1, 0, 1, -1, -1, 1, 1};
+  unsigned int current_dist;
+  unsigned int lowest_dist;
+  int lowest_index = -1;
+  int i_max;
+  int i;
+
+  TCOD_IFNOT(data != NULL && out_x != NULL && out_y != NULL) return false;
+  TCOD_IFNOT((unsigned)x < (unsigned)data->width && (unsigned)y < (unsigned)data->height) return false;
+
+  i_max = (data->diagonal_cost == 0 ? 4 : 8);
+  current_dist = data->distances[y * data->width + x];
+
+  if (current_dist == 0xFFFFFFFF) {
+    return false; /* Unreachable cell */
+  }
+
+  lowest_dist = current_dist;
+
+  for (i = 0; i < i_max; i++) {
+    int nx = x + dx[i];
+    int ny = y + dy[i];
+    if ((unsigned)nx < (unsigned)data->width && (unsigned)ny < (unsigned)data->height) {
+      unsigned int dist = data->distances[ny * data->width + nx];
+      if (dist < lowest_dist) {
+        lowest_dist = dist;
+        lowest_index = i;
+      }
+    }
+  }
+
+  if (lowest_index < 0) {
+    /* Already at goal or no better neighbor */
+    *out_x = x;
+    *out_y = y;
+    return false;
+  }
+
+  *out_x = x + dx[lowest_index];
+  *out_y = y + dy[lowest_index];
+  return true;
+}
+
 /* get distance from source */
 float TCOD_dijkstra_get_distance(TCOD_Dijkstra* data, int x, int y) {
   unsigned int* distances;

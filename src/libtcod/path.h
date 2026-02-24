@@ -165,6 +165,30 @@ TCODLIB_API void TCOD_dijkstra_compute_multi(
  *  @versionadded{Unreleased}
  */
 TCODLIB_API void TCOD_dijkstra_compute_masked(TCOD_Dijkstra* dijkstra, const uint8_t* mask);
+
+/**
+ *  Invert the Dijkstra distance map for flee/safety calculations.
+ *
+ *  Transforms distances so that cells near goals become high values and
+ *  cells far from goals become low values. Useful for AI flee behavior.
+ *
+ *  @param dijkstra The Dijkstra pathfinder (must have compute called first).
+ *  @versionadded{Unreleased}
+ */
+TCODLIB_API void TCOD_dijkstra_invert(TCOD_Dijkstra* dijkstra);
+
+/**
+ *  Get the adjacent cell with the lowest distance (gradient descent).
+ *
+ *  @param dijkstra The Dijkstra pathfinder (must have compute called first).
+ *  @param x Current x position.
+ *  @param y Current y position.
+ *  @param out_x Output: x coordinate of best neighbor.
+ *  @param out_y Output: y coordinate of best neighbor.
+ *  @return true if a valid neighbor was found, false if stuck or at goal.
+ *  @versionadded{Unreleased}
+ */
+TCODLIB_API bool TCOD_dijkstra_get_descent(TCOD_Dijkstra* dijkstra, int x, int y, int* out_x, int* out_y);
 TCODLIB_API float TCOD_dijkstra_get_distance(TCOD_Dijkstra* dijkstra, int x, int y);
 TCODLIB_API bool TCOD_dijkstra_path_set(TCOD_Dijkstra* dijkstra, int x, int y);
 TCODLIB_API bool TCOD_dijkstra_is_empty(TCOD_Dijkstra* path);

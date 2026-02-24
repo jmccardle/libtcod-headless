@@ -177,3 +177,139 @@ TEST_CASE("Dijkstra multi-goal with overlapping roots", "[dijkstra]") {
   TCOD_dijkstra_delete(dijkstra);
   TCOD_map_delete(map);
 }
+
+TEST_CASE("Dijkstra invert creates flee map", "[dijkstra]") {
+  auto map = TCOD_map_new(10, 10);
+  REQUIRE(map != nullptr);
+
+  for (int y = 0; y < 10; y++) {
+    for (int x = 0; x < 10; x++) {
+      TCOD_map_set_properties(map, x, y, true, true);
+    }
+  }
+
+  auto dijkstra = TCOD_dijkstra_new(map, 1.41f);
+  REQUIRE(dijkstra != nullptr);
+
+  // Single goal at center
+  TCOD_dijkstra_compute(dijkstra, 5, 5);
+
+  // Before invert: center has distance 0, corners have max distance
+  float center_before = TCOD_dijkstra_get_distance(dijkstra, 5, 5);
+  float corner_before = TCOD_dijkstra_get_distance(dijkstra, 0, 0);
+  REQUIRE(center_before == 0.0f);
+  REQUIRE(corner_before > center_before);
+
+  // Invert the map
+  TCOD_dijkstra_invert(dijkstra);
+
+  // After invert: center has max distance, corners have distance 0
+  float center_after = TCOD_dijkstra_get_distance(dijkstra, 5, 5);
+  float corner_after = TCOD_dijkstra_get_distance(dijkstra, 0, 0);
+  REQUIRE(center_after > corner_after);
+  REQUIRE(corner_after < center_before + 1.0f);  // Corner should now be low
+
+  TCOD_dijkstra_delete(dijkstra);
+  TCOD_map_delete(map);
+}
+
+TEST_CASE("Dijkstra get_descent follows gradient", "[dijkstra]") {
+  auto map = TCOD_map_new(10, 10);
+  REQUIRE(map != nullptr);
+
+  for (int y = 0; y < 10; y++) {
+    for (int x = 0; x < 10; x++) {
+      TCOD_map_set_properties(map, x, y, true, true);
+    }
+  }
+
+  auto dijkstra = TCOD_dijkstra_new(map, 1.41f);
+  REQUIRE(dijkstra != nullptr);
+
+  // Goal at (0,0)
+  TCOD_dijkstra_compute(dijkstra, 0, 0);
+
+  // Start at (5,5) and follow gradient
+  int x = 5, y = 5;
+  int out_x, out_y;
+  int steps = 0;
+  const int max_steps = 20;
+
+  while (TCOD_dijkstra_get_descent(dijkstra, x, y, &out_x, &out_y) && steps < max_steps) {
+    // Distance should decrease
+    float old_dist = TCOD_dijkstra_get_distance(dijkstra, x, y);
+    float new_dist = TCOD_dijkstra_get_distance(dijkstra, out_x, out_y);
+    REQUIRE(new_dist < old_dist);
+
+    x = out_x;
+    y = out_y;
+    steps++;
+  }
+
+  // Should have reached goal (0,0)
+  REQUIRE(x == 0);
+  REQUIRE(y == 0);
+
+  TCOD_dijkstra_delete(dijkstra);
+  TCOD_map_delete(map);
+}
+
+TEST_CASE("Dijkstra get_descent at goal returns false", "[dijkstra]") {
+  auto map = TCOD_map_new(10, 10);
+  REQUIRE(map != nullptr);
+
+  for (int y = 0; y < 10; y++) {
+    for (int x = 0; x < 10; x++) {
+      TCOD_map_set_properties(map, x, y, true, true);
+    }
+  }
+
+  auto dijkstra = TCOD_dijkstra_new(map, 1.41f);
+  REQUIRE(dijkstra != nullptr);
+
+  TCOD_dijkstra_compute(dijkstra, 5, 5);
+
+  // At goal, descent should return false
+  int out_x, out_y;
+  REQUIRE_FALSE(TCOD_dijkstra_get_descent(dijkstra, 5, 5, &out_x, &out_y));
+
+  TCOD_dijkstra_delete(dijkstra);
+  TCOD_map_delete(map);
+}
+
+TEST_CASE("Dijkstra flee behavior with inverted multi-goal", "[dijkstra]") {
+  // Simulate a monster fleeing from multiple threats
+  auto map = TCOD_map_new(20, 20);
+  REQUIRE(map != nullptr);
+
+  for (int y = 0; y < 20; y++) {
+    for (int x = 0; x < 20; x++) {
+      TCOD_map_set_properties(map, x, y, true, true);
+    }
+  }
+
+  auto dijkstra = TCOD_dijkstra_new(map, 1.41f);
+  REQUIRE(dijkstra != nullptr);
+
+  // Two threats at (5,5) and (15,5)
+  int threats_x[] = {5, 15};
+  int threats_y[] = {5, 5};
+  TCOD_dijkstra_compute_multi(dijkstra, 2, threats_x, threats_y);
+
+  // Invert to create flee map
+  TCOD_dijkstra_invert(dijkstra);
+
+  // Monster at (10,5) - between the threats
+  int x = 10, y = 5;
+  int out_x, out_y;
+
+  // Following gradient descent should move away from both threats
+  if (TCOD_dijkstra_get_descent(dijkstra, x, y, &out_x, &out_y)) {
+    // New position should be further from center line y=5
+    // (fleeing up or down, not towards either threat)
+    REQUIRE(out_y != 5);  // Should move away vertically
+  }
+
+  TCOD_dijkstra_delete(dijkstra);
+  TCOD_map_delete(map);
+}
