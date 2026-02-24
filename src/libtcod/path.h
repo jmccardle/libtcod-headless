@@ -44,12 +44,64 @@
 extern "C" {
 #endif
 typedef float (*TCOD_path_func_t)(int xFrom, int yFrom, int xTo, int yTo, void* user_data);
+
+/**
+ *  Custom A* heuristic function type.
+ *
+ *  @param x Current cell x coordinate.
+ *  @param y Current cell y coordinate.
+ *  @param goal_x Goal cell x coordinate.
+ *  @param goal_y Goal cell y coordinate.
+ *  @param user_data User-provided data pointer.
+ *  @return Estimated cost from (x,y) to (goal_x, goal_y). Must be admissible (never overestimate).
+ *  @versionadded{Unreleased}
+ */
+typedef float (*TCOD_heuristic_func_t)(int x, int y, int goal_x, int goal_y, void* user_data);
+
 struct TCOD_Path;
 typedef struct TCOD_Path* TCOD_path_t;
 
 TCODLIB_API TCOD_path_t TCOD_path_new_using_map(TCOD_Map* map, float diagonalCost);
 TCODLIB_API TCOD_path_t
 TCOD_path_new_using_function(int map_width, int map_height, TCOD_path_func_t func, void* user_data, float diagonalCost);
+
+/**
+ *  Create a pathfinder with custom walk cost and heuristic functions.
+ *
+ *  @param map_width Width of the map.
+ *  @param map_height Height of the map.
+ *  @param func Walk cost function (required).
+ *  @param heuristic_func Custom A* heuristic function (NULL = Euclidean distance).
+ *  @param user_data User data passed to both the walk cost and heuristic functions.
+ *      Use TCOD_path_set_heuristic afterwards to give the heuristic a distinct context.
+ *  @param diagonalCost Cost multiplier for diagonal moves (0 = disallow diagonals).
+ *  @param heuristic_weight Weight for heuristic (1.0 = optimal A*, >1.0 = weighted A*).
+ *  @return New pathfinder or NULL on error.
+ *  @versionadded{Unreleased}
+ */
+TCODLIB_API TCOD_path_t TCOD_path_new_using_function_ex(
+    int map_width,
+    int map_height,
+    TCOD_path_func_t func,
+    TCOD_heuristic_func_t heuristic_func,
+    void* user_data,
+    float diagonalCost,
+    float heuristic_weight);
+
+/**
+ *  Set or change the heuristic function for an existing pathfinder.
+ *
+ *  Works on any pathfinder, including map-based ones, letting a custom heuristic
+ *  carry its own context independent of the walk cost function's user data.
+ *
+ *  @param path The pathfinder to modify.
+ *  @param heuristic_func Custom heuristic function (NULL = Euclidean distance).
+ *  @param heuristic_user_data Context pointer passed to heuristic_func (may be NULL).
+ *  @param heuristic_weight Weight for heuristic (1.0 = optimal A*, >1.0 = weighted A*).
+ *  @versionadded{Unreleased}
+ */
+TCODLIB_API void TCOD_path_set_heuristic(
+    TCOD_path_t path, TCOD_heuristic_func_t heuristic_func, void* heuristic_user_data, float heuristic_weight);
 
 TCODLIB_API bool TCOD_path_compute(TCOD_path_t path, int ox, int oy, int dx, int dy);
 TCODLIB_API bool TCOD_path_walk(TCOD_path_t path, int* x, int* y, bool recalculate_when_needed);
