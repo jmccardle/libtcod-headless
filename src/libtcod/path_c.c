@@ -57,6 +57,8 @@ typedef struct TCOD_Path {
   TCOD_Map* map;
   TCOD_path_func_t func;
   void* user_data;
+  TCOD_heuristic_func_t heuristic_func; /* custom A* heuristic (NULL = Euclidean) */
+  float heuristic_weight; /* heuristic weight (1.0 = optimal A*) */
 } TCOD_Path;
 
 /* small layer on top of TCOD_list_t to implement a binary heap (min_heap) */
@@ -236,6 +238,8 @@ static TCOD_Path* TCOD_path_new_intern(int w, int h) {
   }
   path->path = TCOD_list_new();
   path->heap = TCOD_list_new();
+  path->heuristic_func = NULL; /* default: Euclidean distance */
+  path->heuristic_weight = 1.0f; /* default: optimal A* */
   return path;
 }
 
@@ -261,6 +265,33 @@ TCOD_Path* TCOD_path_new_using_function(
   path->user_data = user_data;
   path->diagonalCost = diagonalCost;
   return path;
+}
+
+TCOD_Path* TCOD_path_new_using_function_ex(
+    int map_width,
+    int map_height,
+    TCOD_path_func_t func,
+    TCOD_heuristic_func_t heuristic_func,
+    void* user_data,
+    float diagonalCost,
+    float heuristic_weight) {
+  TCOD_IFNOT(func != NULL && map_width > 0 && map_height > 0) return NULL;
+  TCOD_Path* path = TCOD_path_new_intern(map_width, map_height);
+  if (!path) {
+    return NULL;
+  }
+  path->func = func;
+  path->user_data = user_data;
+  path->diagonalCost = diagonalCost;
+  path->heuristic_func = heuristic_func;
+  path->heuristic_weight = heuristic_weight > 0.0f ? heuristic_weight : 1.0f;
+  return path;
+}
+
+void TCOD_path_set_heuristic(TCOD_path_t path, TCOD_heuristic_func_t heuristic_func, float heuristic_weight) {
+  TCOD_IFNOT(path != NULL) return;
+  path->heuristic_func = heuristic_func;
+  path->heuristic_weight = heuristic_weight > 0.0f ? heuristic_weight : 1.0f;
 }
 
 bool TCOD_path_compute(TCOD_Path* path, int ox, int oy, int dx, int dy) {
@@ -403,16 +434,21 @@ static void TCOD_path_set_cells(TCOD_Path* path) {
             /* put a new cell in the heap */
             int offset = cx + cy * path->w;
             /* A* heuristic : remaining distance */
-            float remaining = (float)sqrt((cx - path->dx) * (cx - path->dx) + (cy - path->dy) * (cy - path->dy));
+            float remaining;
+            if (path->heuristic_func) {
+              remaining = path->heuristic_func(cx, cy, path->dx, path->dy, path->user_data);
+            } else {
+              remaining = (float)sqrt((cx - path->dx) * (cx - path->dx) + (cy - path->dy) * (cy - path->dy));
+            }
             path->grid[offset] = covered;
-            path->heuristic[offset] = covered + remaining;
+            path->heuristic[offset] = covered + path->heuristic_weight * remaining;
             path->prev[offset] = previous_dirs[i];
             TCOD_path_push_cell(path, cx, cy);
           } else if (previousCovered > covered) {
             /* we found a better path to a cell already in the heap */
             int offset = cx + cy * path->w;
             path->grid[offset] = covered;
-            path->heuristic[offset] -= (previousCovered - covered); /* fix the A* score */
+            path->heuristic[offset] -= (previousCovered - covered); /* fix the A* score (weight already applied) */
             path->prev[offset] = previous_dirs[i];
             /* reorder the heap */
             heap_reorder(path, offset);
