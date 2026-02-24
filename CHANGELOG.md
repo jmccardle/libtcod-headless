@@ -14,6 +14,7 @@ Versions since `2.0.0` only track API breaks and no longer guarantee ABI compati
 - Added `TCOD_heuristic_func_t` callback type for custom A* heuristics.
 - Added `TCOD_path_new_using_function_ex` and `TCOD_path_set_heuristic` for custom heuristic support.
 - Added built-in heuristic functions: `TCOD_heuristic_euclidean`, `TCOD_heuristic_manhattan`, `TCOD_heuristic_chebyshev`, `TCOD_heuristic_diagonal`, and `TCOD_heuristic_zero`.
+- Added `TCOD_dijkstra_compute_multi` and `TCOD_dijkstra_compute_masked` for multi-root Dijkstra computation.
 
 ### Changed
 - `TCOD_heightmap_get_minmax` now outputs `FLT_MAX` and `-FLT_MAX` in exceptional cases instead of zero.

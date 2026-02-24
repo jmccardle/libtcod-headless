@@ -563,18 +563,17 @@ TCOD_Dijkstra* TCOD_dijkstra_new_using_function(
   return data;
 }
 
-/* compute a Dijkstra grid */
-void TCOD_dijkstra_compute(TCOD_Dijkstra* data, int root_x, int root_y) {
+/* Internal Dijkstra loop: drain the queue from pre-initialized distances[]/nodes[]
+ * arrays. The caller must mark every root in distances[] (distance 0) and place it
+ * in nodes[], passing last_index pointing past the last initialized root node.
+ * Shared by the single-root and multi-root entry points so the BFS is written once. */
+static void dijkstra_compute_internal(TCOD_Dijkstra* data, unsigned int last_index) {
   /* map size data */
   const unsigned int mx = data->width;
   const unsigned int my = data->height;
   const unsigned int m_max = data->nodes_max;
-  /* encode the root coords in one integer */
-  const unsigned int root = (root_y * mx) + root_x;
-  /* some stuff to walk through the nodes table */
-  unsigned int index = 0; /* the index of the first node in queue */
-  unsigned int last_index = 1; /* total nb of registered queue indices */
   unsigned int* nodes = data->nodes; /* table of nodes to which the indices above apply */
+  unsigned int* distances = data->distances;
   /* ok, here's the order of node processing: W, S, E, N, NW, NE, SE, SW */
   static const int dx[8] = {-1, 0, 1, 0, -1, 1, 1, -1};
   static const int dy[8] = {0, -1, 0, 1, -1, -1, 1, 1};
@@ -583,15 +582,7 @@ void TCOD_dijkstra_compute(TCOD_Dijkstra* data, int root_x, int root_y) {
       100, 100, 100, 100, data->diagonal_cost, data->diagonal_cost, data->diagonal_cost, data->diagonal_cost};
   /* if diagonal_cost is 0, disallow diagonal moves */
   const int i_max = (data->diagonal_cost == 0 ? 4 : 8);
-  /* alright, now set the distances table and set everything to infinity */
-  unsigned int* distances = data->distances;
-  TCOD_IFNOT(data != NULL) return;
-  TCOD_IFNOT((unsigned)root_x < (unsigned)mx && (unsigned)root_y < (unsigned)my) return;
-  memset(distances, 0xFFFFFFFF, m_max * sizeof(*distances));
-  memset(nodes, 0xFFFFFFFF, m_max * sizeof(*nodes));
-  /* data for root node is known... */
-  distances[root] = 0;
-  nodes[index] = root; /*set starting note to root */
+  unsigned int index = 0; /* the index of the first node in queue */
   /* and the loop */
   do {
     if (nodes[index] == 0xFFFFFFFF) {
@@ -649,6 +640,75 @@ void TCOD_dijkstra_compute(TCOD_Dijkstra* data, int root_x, int root_y) {
       }
     }
   } while (m_max > ++index);
+}
+
+/* compute a Dijkstra grid from a single root */
+void TCOD_dijkstra_compute(TCOD_Dijkstra* data, int root_x, int root_y) {
+  TCOD_IFNOT(data != NULL) return;
+  const unsigned int mx = data->width;
+  const unsigned int m_max = data->nodes_max;
+  TCOD_IFNOT((unsigned)root_x < (unsigned)mx && (unsigned)root_y < (unsigned)data->height) return;
+  const unsigned int root = (root_y * mx) + root_x;
+  memset(data->distances, 0xFFFFFFFF, m_max * sizeof(*data->distances));
+  memset(data->nodes, 0xFFFFFFFF, m_max * sizeof(*data->nodes));
+  data->distances[root] = 0;
+  data->nodes[0] = root;
+  dijkstra_compute_internal(data, 1);
+}
+
+/* compute a Dijkstra grid from multiple root positions simultaneously */
+void TCOD_dijkstra_compute_multi(TCOD_Dijkstra* data, int n_roots, const int* roots_x, const int* roots_y) {
+  TCOD_IFNOT(data != NULL && n_roots > 0 && roots_x != NULL && roots_y != NULL) return;
+  const unsigned int mx = data->width;
+  const unsigned int my = data->height;
+  const unsigned int m_max = data->nodes_max;
+  memset(data->distances, 0xFFFFFFFF, m_max * sizeof(*data->distances));
+  memset(data->nodes, 0xFFFFFFFF, m_max * sizeof(*data->nodes));
+  /* seed every in-bounds root with distance 0, skipping duplicates */
+  unsigned int last_index = 0;
+  for (int r = 0; r < n_roots; r++) {
+    if ((unsigned)roots_x[r] < mx && (unsigned)roots_y[r] < my) {
+      const unsigned int root = (roots_y[r] * mx) + roots_x[r];
+      if (data->distances[root] == 0xFFFFFFFF) { /* not already seeded */
+        data->distances[root] = 0;
+        data->nodes[last_index++] = root;
+      }
+    }
+  }
+  dijkstra_compute_internal(data, last_index);
+}
+
+/* compute a Dijkstra grid using a bitmap mask of goal positions */
+void TCOD_dijkstra_compute_masked(TCOD_Dijkstra* data, const uint8_t* mask) {
+  TCOD_IFNOT(data != NULL && mask != NULL) return;
+  const int n_cells = data->width * data->height;
+  /* first pass: count non-zero mask entries to size the root arrays exactly */
+  int n_roots = 0;
+  for (int i = 0; i < n_cells; i++) {
+    if (mask[i] != 0) n_roots++;
+  }
+  if (n_roots == 0) return;
+  int* const roots_x = malloc(n_roots * sizeof(*roots_x));
+  int* const roots_y = malloc(n_roots * sizeof(*roots_y));
+  if (!roots_x || !roots_y) {
+    free(roots_x);
+    free(roots_y);
+    return;
+  }
+  /* second pass: collect coordinates */
+  int n = 0;
+  for (int y = 0; y < data->height; y++) {
+    for (int x = 0; x < data->width; x++) {
+      if (mask[y * data->width + x] != 0) {
+        roots_x[n] = x;
+        roots_y[n] = y;
+        n++;
+      }
+    }
+  }
+  TCOD_dijkstra_compute_multi(data, n_roots, roots_x, roots_y);
+  free(roots_x);
+  free(roots_y);
 }
 
 /* get distance from source */
