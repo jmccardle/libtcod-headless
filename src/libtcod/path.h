@@ -103,6 +103,18 @@ TCODLIB_API TCOD_path_t TCOD_path_new_using_function_ex(
 TCODLIB_API void TCOD_path_set_heuristic(
     TCOD_path_t path, TCOD_heuristic_func_t heuristic_func, void* heuristic_user_data, float heuristic_weight);
 
+/* Built-in heuristic functions */
+/** Euclidean distance heuristic (default). @versionadded{Unreleased} */
+TCODLIB_API float TCOD_heuristic_euclidean(int x, int y, int goal_x, int goal_y, void* user_data);
+/** Manhattan distance heuristic (only admissible when diagonal moves are disabled). @versionadded{Unreleased} */
+TCODLIB_API float TCOD_heuristic_manhattan(int x, int y, int goal_x, int goal_y, void* user_data);
+/** Chebyshev distance heuristic (max of dx, dy). @versionadded{Unreleased} */
+TCODLIB_API float TCOD_heuristic_chebyshev(int x, int y, int goal_x, int goal_y, void* user_data);
+/** Diagonal distance heuristic (optimal for uniform cost with diagonal moves). @versionadded{Unreleased} */
+TCODLIB_API float TCOD_heuristic_diagonal(int x, int y, int goal_x, int goal_y, void* user_data);
+/** Zero heuristic (converts A* to Dijkstra). @versionadded{Unreleased} */
+TCODLIB_API float TCOD_heuristic_zero(int x, int y, int goal_x, int goal_y, void* user_data);
+
 TCODLIB_API bool TCOD_path_compute(TCOD_path_t path, int ox, int oy, int dx, int dy);
 TCODLIB_API bool TCOD_path_walk(TCOD_path_t path, int* x, int* y, bool recalculate_when_needed);
 TCODLIB_API bool TCOD_path_is_empty(TCOD_path_t path);

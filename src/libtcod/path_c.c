@@ -478,6 +478,50 @@ void TCOD_path_get_destination(TCOD_Path* path, int* x, int* y) {
 }
 
 /* ------------------------------------------------------- *
+ * Built-in A* Heuristic Functions                         *
+ * ------------------------------------------------------- */
+
+float TCOD_heuristic_euclidean(int x, int y, int goal_x, int goal_y, void* user_data) {
+  (void)user_data; /* unused */
+  const int dx = x - goal_x;
+  const int dy = y - goal_y;
+  return (float)sqrt(dx * dx + dy * dy);
+}
+
+float TCOD_heuristic_manhattan(int x, int y, int goal_x, int goal_y, void* user_data) {
+  (void)user_data; /* unused */
+  const int dx = x > goal_x ? x - goal_x : goal_x - x;
+  const int dy = y > goal_y ? y - goal_y : goal_y - y;
+  return (float)(dx + dy);
+}
+
+float TCOD_heuristic_chebyshev(int x, int y, int goal_x, int goal_y, void* user_data) {
+  (void)user_data; /* unused */
+  const int dx = x > goal_x ? x - goal_x : goal_x - x;
+  const int dy = y > goal_y ? y - goal_y : goal_y - y;
+  return (float)(dx > dy ? dx : dy);
+}
+
+float TCOD_heuristic_diagonal(int x, int y, int goal_x, int goal_y, void* user_data) {
+  (void)user_data; /* unused */
+  const int dx = x > goal_x ? x - goal_x : goal_x - x;
+  const int dy = y > goal_y ? y - goal_y : goal_y - y;
+  /* octile distance: max(dx, dy) + (sqrt(2) - 1) * min(dx, dy) */
+  const int min_d = dx < dy ? dx : dy;
+  const int max_d = dx > dy ? dx : dy;
+  return (float)max_d + (1.41421356f - 1.0f) * (float)min_d;
+}
+
+float TCOD_heuristic_zero(int x, int y, int goal_x, int goal_y, void* user_data) {
+  (void)x;
+  (void)y;
+  (void)goal_x;
+  (void)goal_y;
+  (void)user_data;
+  return 0.0f;
+}
+
+/* ------------------------------------------------------- *
  * Dijkstra                                                *
  * written by Mingos                                       *
  * -----------------                                       *
