@@ -11,6 +11,8 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
+#include <string>
+#include <vector>
 
 // Simple uniform cost function for testing
 static float uniform_cost(int xFrom, int yFrom, int xTo, int yTo, void* userData) {
@@ -309,6 +311,45 @@ TEST_CASE("Dijkstra flee behavior with inverted multi-goal", "[dijkstra]") {
     // (fleeing up or down, not towards either threat)
     REQUIRE(out_y != 5);  // Should move away vertically
   }
+
+  TCOD_dijkstra_delete(dijkstra);
+  TCOD_map_delete(map);
+}
+
+// The point of multi-root Dijkstra: build the "distance to the nearest of M goals"
+// field (a Dijkstra map, as used for roguelike AI) in a SINGLE O(cells) flood. The
+// alternative without it is M single-source floods plus an element-wise min-merge to
+// combine them into the same field. This benchmark contrasts the two for the same
+// output. Tagged [.benchmark] so it is excluded from normal test runs.
+TEST_CASE("multi-root Dijkstra vs repeated single-source", "[dijkstra][.benchmark]") {
+  constexpr int W = 64;
+  constexpr int H = 64;
+  constexpr int M = 5;
+  const int roots_x[M] = {1, W - 2, 1, W - 2, W / 2};
+  const int roots_y[M] = {1, 1, H - 2, H - 2, H / 2};
+  const int query = (H / 4) * W + (W / 2);
+  TCOD_Map* map = TCOD_map_new(W, H);
+  TCOD_map_clear(map, true, true);
+  TCOD_Dijkstra* dijkstra = TCOD_dijkstra_new(map, 1.0f);
+
+  BENCHMARK(std::to_string(M) + " goals: multi-root (one flood)") {
+    TCOD_dijkstra_compute_multi(dijkstra, M, roots_x, roots_y);
+    return TCOD_dijkstra_get_distance(dijkstra, W / 2, H / 4);
+  };
+
+  BENCHMARK(std::to_string(M) + " goals: single-source x" + std::to_string(M) + " + min-merge") {
+    std::vector<float> field(static_cast<size_t>(W) * H, 1e30f);
+    for (int i = 0; i < M; ++i) {
+      TCOD_dijkstra_compute(dijkstra, roots_x[i], roots_y[i]);
+      for (int y = 0; y < H; ++y) {
+        for (int x = 0; x < W; ++x) {
+          const float d = TCOD_dijkstra_get_distance(dijkstra, x, y);
+          if (d >= 0.0f && d < field[static_cast<size_t>(y) * W + x]) field[static_cast<size_t>(y) * W + x] = d;
+        }
+      }
+    }
+    return field[query];
+  };
 
   TCOD_dijkstra_delete(dijkstra);
   TCOD_map_delete(map);
