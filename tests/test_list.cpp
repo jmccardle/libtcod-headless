@@ -67,6 +67,25 @@ TEST_CASE("TCOD_List iter") {
   TCOD_list_delete(int_list);
 }
 
+TEST_CASE("TCOD_List remove until empty") {
+  // Removing the last item must not compute an out-of-range pointer, see TCOD_list_remove_iterator.
+  TCOD_list_t int_list = TCOD_list_new();
+  TCOD_list_push(int_list, (void*)1);
+  TCOD_list_push(int_list, (void*)2);
+  TCOD_list_remove(int_list, (void*)1);
+  REQUIRE(as_vector(int_list) == std::vector{2});
+  TCOD_list_remove(int_list, (void*)2);
+  REQUIRE(TCOD_list_is_empty(int_list));
+
+  TCOD_list_push(int_list, (void*)3);
+  TCOD_list_push(int_list, (void*)4);
+  TCOD_list_remove_fast(int_list, (void*)3);
+  REQUIRE(as_vector(int_list) == std::vector{4});
+  TCOD_list_remove_fast(int_list, (void*)4);
+  REQUIRE(TCOD_list_is_empty(int_list));
+  TCOD_list_delete(int_list);
+}
+
 TEST_CASE("TCODList") {
   auto int_list = TCODList<int>(5);
   REQUIRE(int_list.size() == 0);

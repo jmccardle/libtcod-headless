@@ -192,14 +192,20 @@ void TCOD_list_reverse(TCOD_List* l) {
   }
 }
 /**
- *  Remove an item from the list and return a new iterator.
+ *  Remove the item at `elt` from the list, shifting the following items down.
  */
-void** TCOD_list_remove_iterator(TCOD_List* l, void** elt) {
+static void TCOD_list_remove_int(TCOD_List* l, void** elt) {
   void** curElt;
   for (curElt = elt; curElt < TCOD_list_end(l) - 1; ++curElt) {
     *curElt = *(curElt + 1);
   }
   l->fillSize--;
+}
+/**
+ *  Remove an item from the list and return a new iterator.
+ */
+void** TCOD_list_remove_iterator(TCOD_List* l, void** elt) {
+  TCOD_list_remove_int(l, elt);
   if (l->fillSize == 0) {
     return ((void**)NULL) - 1;
   } else {
@@ -213,10 +219,17 @@ void TCOD_list_remove(TCOD_List* l, const void* elt) {
   void** curElt;
   for (curElt = TCOD_list_begin(l); curElt != TCOD_list_end(l); ++curElt) {
     if (*curElt == elt) {
-      TCOD_list_remove_iterator(l, curElt);
+      TCOD_list_remove_int(l, curElt);
       return;
     }
   }
+}
+/**
+ *  Remove the item at `elt` from the list, replacing it with the item at the end of the list.
+ */
+static void TCOD_list_remove_fast_int(TCOD_List* l, void** elt) {
+  *elt = l->array[l->fillSize - 1];
+  l->fillSize--;
 }
 /**
  *  Remove an item from the list and return a new iterator.
@@ -225,8 +238,7 @@ void TCOD_list_remove(TCOD_List* l, const void* elt) {
  *  list.  This is faster but does not preserve the list order.
  */
 void** TCOD_list_remove_iterator_fast(TCOD_List* l, void** elt) {
-  *elt = l->array[l->fillSize - 1];
-  l->fillSize--;
+  TCOD_list_remove_fast_int(l, elt);
   if (l->fillSize == 0) {
     return ((void**)NULL) - 1;
   } else {
@@ -243,7 +255,7 @@ void TCOD_list_remove_fast(TCOD_List* l, const void* elt) {
   void** curElt;
   for (curElt = TCOD_list_begin(l); curElt != TCOD_list_end(l); ++curElt) {
     if (*curElt == elt) {
-      TCOD_list_remove_iterator_fast(l, curElt);
+      TCOD_list_remove_fast_int(l, curElt);
       return;
     }
   }
